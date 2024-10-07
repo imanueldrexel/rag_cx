@@ -6,16 +6,16 @@ from langchain_core.runnables import RunnableLambda
 from langchain.prompts import ChatPromptTemplate
 from operator import itemgetter
 from ast import literal_eval
-from config_env import OPEN_AI_KEY, AZURE_OPENAI_LLM_ENDPOINT, AZURE_OPENAI_EMBEDDING_ENDPOINT, AZURE_OPENAI_VERSION
+from config_env import AZURE_OPENAI_KEY, AZURE_OPENAI_LLM_ENDPOINT, AZURE_OPENAI_EMBEDDING_ENDPOINT, AZURE_OPENAI_VERSION
 
 
-embedding_model = AzureOpenAIEmbeddings(api_key = OPEN_AI_KEY,
+embedding_model = AzureOpenAIEmbeddings(api_key = AZURE_OPENAI_KEY,
                                         azure_endpoint = AZURE_OPENAI_EMBEDDING_ENDPOINT
                                         ) 
 vector_store = InMemoryVectorStore(embedding_model).load('vector_store', embedding_model)
 # open_ai_llm = ChatOpenAI(model="gpt-4o-mini", temperature = 0)
 open_ai_llm = AzureChatOpenAI(
-    api_key = OPEN_AI_KEY,
+    api_key = AZURE_OPENAI_KEY,
     openai_api_version = AZURE_OPENAI_VERSION,
     azure_endpoint = AZURE_OPENAI_LLM_ENDPOINT
 )
