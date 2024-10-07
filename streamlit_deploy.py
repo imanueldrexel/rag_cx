@@ -6,7 +6,7 @@ from langchain_core.runnables import RunnableLambda
 from langchain.prompts import ChatPromptTemplate
 from operator import itemgetter
 from ast import literal_eval
-from config_env import key, embedding_endpoint,llm_endpoin, AZURE_OPENAI_VERSION
+from config_env import embedding_endpoint,llm_endpoin, AZURE_OPENAI_VERSION
 
 
 embedding_model = AzureOpenAIEmbeddings(azure_endpoint = embedding_endpoint) 
