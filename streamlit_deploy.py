@@ -1,12 +1,11 @@
 import streamlit as st
-import os
 from langchain_core.vectorstores import InMemoryVectorStore
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langchain_core.runnables import RunnableLambda
 from langchain.prompts import ChatPromptTemplate
 from operator import itemgetter
 from ast import literal_eval
-from config_env import embedding_endpoint,llm_endpoin, AZURE_OPENAI_VERSION
+from config_env import embedding_endpoint,llm_endpoint, AZURE_OPENAI_VERSION
 
 
 embedding_model = AzureOpenAIEmbeddings(azure_endpoint = embedding_endpoint) 
@@ -14,7 +13,7 @@ vector_store = InMemoryVectorStore(embedding_model).load('vector_store', embeddi
 # open_ai_llm = ChatOpenAI(model="gpt-4o-mini", temperature = 0)
 open_ai_llm = AzureChatOpenAI(
     openai_api_version = AZURE_OPENAI_VERSION,
-    azure_endpoint = llm_endpoin
+    azure_endpoint = llm_endpoint
 )
 
 transform_prompt = ChatPromptTemplate.from_template("""
