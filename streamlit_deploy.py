@@ -9,13 +9,10 @@ from ast import literal_eval
 from config_env import key, embedding_endpoint,llm_endpoin, AZURE_OPENAI_VERSION
 
 
-embedding_model = AzureOpenAIEmbeddings(api_key = key,
-                                        azure_endpoint = embedding_endpoint
-                                        ) 
+embedding_model = AzureOpenAIEmbeddings(azure_endpoint = embedding_endpoint) 
 vector_store = InMemoryVectorStore(embedding_model).load('vector_store', embedding_model)
 # open_ai_llm = ChatOpenAI(model="gpt-4o-mini", temperature = 0)
 open_ai_llm = AzureChatOpenAI(
-    api_key = key,
     openai_api_version = AZURE_OPENAI_VERSION,
     azure_endpoint = llm_endpoin
 )
