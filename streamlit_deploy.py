@@ -178,44 +178,6 @@ st.title("Your Truly Livin Partner")
 # Initialize session state variables
 if "messages" not in st.session_state:
     st.session_state.messages = []
-if "chain" not in st.session_state:
-    st.session_state.chain = None
-if "api_key_configured" not in st.session_state:
-    st.session_state.api_key_configured = False
-if "documents_processed" not in st.session_state:
-    st.session_state.documents_processed = False
-
-
-# # Input field for user query
-# if 'text_input' not in st.session_state:
-#     st.session_state['text_input'] = ""
-# question = st.text_input("Ask Me Anything about Livin by Bank Mandiri:", value=st.session_state['text_input'])
-
-# if question:
-#     generate_response(question)
-
-
-def summarize_content(docs):
-    """Summarize the content of the retrieved documents."""
-    combined_content = "\n\n".join(doc.page_content for doc in docs)
-    summary_prompt = ChatPromptTemplate.from_template("""
-    Please summarize the following content in Bahasa Indonesia:
-    
-    {content}
-    
-    Summary:
-    """)
-    
-    summary_chain = summary_prompt | open_ai_llm
-    summary_response = summary_chain.invoke({"content": combined_content})
-    return summary_response.content
-
-
-
-# Initialize session state variables (put this near the top of your script)
-# Initialize session state variables
-if "messages" not in st.session_state:
-    st.session_state.messages = []
 if 'text_input' not in st.session_state:
     st.session_state['text_input'] = ""
 if "intro_made" not in st.session_state:
@@ -247,20 +209,57 @@ RESPONSES = {
 
 def detect_language_preference(text):
     """Simple language detection based on common words"""
-    indo_words = ['apa', 'bagaimana', 'siapa', 'mengapa', 'kapan', 'dimana', 'tolong', 'mohon', 'saya', 'bisa']
+    indo_words = ['apa', 'bagaimana', 'siapa', 'mengapa', 'kapan', 'dimana', 'tolong', 'mohon', 'saya', 'bisa', 'halo', 'hai']
     text_lower = text.lower()
     # Count Indonesian words in the text
     indo_count = sum(1 for word in indo_words if word in text_lower)
     return 'id' if indo_count > 0 else 'en'
 
+def summarize_content(docs):
+    """Summarize the content of the provided documents."""
+    if not docs:
+        return "No relevant documents found."
+
+    # Simple placeholder logic: concatenate document texts
+    # You can replace this with your actual summarization logic
+    summary = " ".join([doc.page_content for doc in docs])
+    return summary  # Consider using a summarization model for better results
+
+def detect_greeting(text):
+    """Detect if the input is a greeting."""
+    return any(keyword in text.lower() for keyword in greeting_keywords)
+
 def get_response(key, lang='id'):
     """Get response in the specified language"""
     return RESPONSES[lang][key]
+
+# def generate_instruction_response(prompt):
+#     """Generate a response for instruction-type questions."""
+#     # Logika untuk menghasilkan respons berdasarkan instruksi yang diberikan
+#     # Anda dapat menggunakan model AI atau menulis aturan khusus di sini
+#     # Contoh sederhana:
+#     return f"Berikut adalah informasi yang saya miliki terkait: {prompt}"
 
 # Display chat history
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
+
+# Generate response using RAG and summarize context
+# Determine if the input is a question or a greeting
+# Updated greeting keywords
+greeting_keywords = ['hai', 'halo', 'selamat pagi', 'selamat siang', 'selamat sore', 
+                        'selamat malam', 'apa kabar', 'greetings', 'hello', 'hi', 
+                        'howdy', 'hey']
+question_keywords = ['apa', 'bagaimana', 'siapa', 'mengapa', 'kapan', 'dimana', 
+                                    'berapa', 'kenapa', 'mana', 'mungkinkah', 'adakah', 
+                                     'bisakah', 'dapatkah', 'coba', 'tolong', 'minta', '?' ]
+instruction_keywords = ['cara', 'bagaimana cara', 'instruksi', 'panduan', 'jelaskan',
+                                    'petunjuk', 'langkah', 'tutorial', 'bisa jelaskan', 
+                                    'dapatkah Anda menunjukkan', 'bagaimana untuk', 'apa langkah-langkah',
+                                    'tunjukkan cara', 'silakan', 'berikan contoh']
+                
+
 
 # Chat input
 if prompt := st.chat_input("What would you like to know?"):
@@ -279,49 +278,80 @@ if prompt := st.chat_input("What would you like to know?"):
                     st.session_state.language_set = True
                 
                 lang = st.session_state.selected_language
-                
-                # First-time greeting
-                if not st.session_state.intro_made:
-                    st.markdown(get_response('greeting', lang))
+
+                # Check if the input is a greeting
+                if detect_greeting(prompt):
+                    greeting_message = get_response('greeting', lang)
+                    st.markdown(greeting_message)
                     st.session_state.intro_made = True
                 else:
-                    # Generate response using RAG
-                    response = rag_chain.invoke({
-                        "question": prompt,
-                        "original_question": prompt
-                    })
+                    # Determine if the input is a question or an instruction
+                    is_question = any(keyword in prompt.lower() for keyword in question_keywords)
+                    is_instruction = any(keyword in prompt.lower() for keyword in instruction_keywords)
 
-                    # Process response
-                    transformed_question = question_transform_chain.invoke({"question": prompt})
-                    docs = vector_store.similarity_search(transformed_question.content, k=3)
-                    summary = summarize_content(docs)
+                    if is_instruction:
+                        # Generate instruction response
+                        instruction_response = generate_response(prompt)
+                        st.markdown(instruction_response)
 
-                    # Combine summary with chatbot response
-                    full_response = f"{summary}\n\n{response.content}"
+                        # Add response to history
+                        st.session_state.messages.append({
+                            "role": "assistant",
+                            "content": instruction_response
+                        })
 
-                    # Check for irrelevant questions
-                    if "tidak relevan" in response.content.lower() or "not relevant" in response.content.lower():
-                        st.markdown(get_response('irrelevant', lang))
+                    elif is_question:
+                        # Generate response using RAG and summarize context
+                        instruction_response = generate_response(prompt)
+                        st.markdown(instruction_response)
+
+                        # Add response to history
+                        st.session_state.messages.append({
+                            "role": "assistant",
+                            "content": instruction_response
+                        })
+
+                        # Process response to find relevant documents
+                        transformed_question = question_transform_chain.invoke({"question": prompt})
+                        docs = vector_store.similarity_search(transformed_question.content, k=3)
+                        summary = summarize_content(docs)
+
+                        # Combine summary with chatbot response
+                        full_response = f"{summary}\n\n{response.content}"
+
+                        # Handle irrelevant questions
+                        if "tidak relevan" in response.content.lower() or "not relevant" in response.content.lower():
+                            st.markdown(get_response('irrelevant', lang))
+                        else:
+                            st.markdown(full_response)
+
+                        # Add response to history
+                        st.session_state.messages.append({
+                            "role": "assistant", 
+                            "content": full_response
+                        })
+
                     else:
-                        st.markdown(full_response)
+                        # Handle other statements
+                        if not st.session_state.intro_made:
+                            greeting_message = get_response('greeting', lang)
+                            st.markdown(greeting_message)
+                            st.session_state.intro_made = True
+                        else:
+                            st.markdown("Saya senang Anda di sini! Apa yang bisa saya bantu?")
 
-                    # Add response to history
-                    st.session_state.messages.append({
-                        "role": "assistant", 
-                        "content": full_response
-                    })
-
-                    # Generate and display related FAQs
-                    related_faqs = generate_related_faqs(prompt)
-                    if related_faqs:
-                        with st.expander(
-                            "Pertanyaan Terkait" if lang == 'id' else "Related Questions"
-                        ):
-                            for faq in related_faqs:
-                                if st.button(faq):
-                                    st.session_state['text_input'] = faq
-                                    st.experimental_rerun()
+                # Generate and display related FAQs
+                related_faqs = generate_related_faqs(prompt)
+                if related_faqs:
+                    with st.expander("Pertanyaan Terkait" if lang == 'id' else "Related Questions"):
+                        for faq in related_faqs:
+                            if st.button(faq):
+                                st.session_state['text_input'] = faq
+                                st.experimental_rerun()
 
             except Exception as e:
-                st.error(get_response('error', lang))
-                print(f"Error: {str(e)}")  # For debugging
+                # Don't display error message after greeting
+                if not st.session_state.intro_made:
+                    st.error(get_response('error', lang))
+                print(f"Error: {str(e)}")  # For debugging only
+
